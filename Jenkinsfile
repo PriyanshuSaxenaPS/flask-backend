@@ -2,16 +2,10 @@
 pipeline {
     agent any
 
-    environment {
-        APP_DIR = '/opt/flask-app'
-        VENV = '/opt/flask-app/venv'
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/YOUR_USERNAME/flask-backend.git'
+                checkout scm
             }
         }
 
@@ -26,16 +20,23 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh '''
-                    venv/bin/pytest -v
-                '''
+                sh 'venv/bin/pytest -v'
             }
         }
 
         stage('Deploy Flask') {
             steps {
                 sh '''
-                    sudo /usr/local/bin/deploy-flask
+                    sudo /usr/local/bin/deploy-flask "$WORKSPACE"
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    sleep 3
+                    curl --fail http://127.0.0.1:5000/health
                 '''
             }
         }
@@ -43,11 +44,11 @@ pipeline {
 
     post {
         success {
-            echo 'Flask deployment successful!'
+            echo 'Flask CI/CD completed successfully!'
         }
 
         failure {
-            echo 'Flask pipeline failed!'
+            echo 'Flask CI/CD failed!'
         }
     }
 }
